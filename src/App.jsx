@@ -960,7 +960,7 @@ export default function App() {
     try {
       var schedUrl = urlOverride || webAppUrl || "";
       var rows = await loadScheduleFromScript(schedUrl);
-      SCHEDULE_DATA_CACHE = rows;
+      /* update local cache */
       setScheduleData(rows);
       var seen = {};
       var dates = [];
