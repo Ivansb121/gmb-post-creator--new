@@ -847,8 +847,22 @@ const SCHEDULE_ROWS = [
   {exec:"Eknath",date:"27-03-2026",name:"Corium Skin Clinic",url:"https://coriumskinclinic.com/dr-asra-khumushi.php",keywords:"dermatologist in byramji town, skin specialist in byramji town, dermatologist in nagpur, skin specialist in nagpur, dermatologist in jaripatka, skin specialist in jaripatka",lat:21.1735878544863,lng:79.0809104957832}
 ];
 
-function loadScheduleFromScript() {
-  return Promise.resolve(SCHEDULE_ROWS);
+async function loadScheduleFromScript(webAppUrl) {
+  if (!webAppUrl || !webAppUrl.trim()) {
+    // Fallback to hardcoded data if no URL given
+    return SCHEDULE_ROWS;
+  }
+  var res = await fetch("/.netlify/functions/sheet", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: webAppUrl.trim(), action: "getSchedule" })
+  });
+  if (!res.ok) throw new Error("Schedule fetch failed: " + res.status);
+  var data = await res.json();
+  if (data.error) throw new Error(data.error);
+  var rows = data.rows || [];
+  // If sheet returns rows, use them; else fall back to hardcoded
+  return rows.length > 0 ? rows : SCHEDULE_ROWS;
 }
 
 /* ---
@@ -936,13 +950,16 @@ export default function App() {
     setDbLoading(false);
   };
 
-  useEffect(function() { loadClients(SHEET_URL_DEFAULT); }, []);
-  useEffect(function() { loadSchedule(); }, []);
+  useEffect(function() {
+    loadClients(SHEET_URL_DEFAULT);
+    loadSchedule(SHEET_URL_DEFAULT);
+  }, []);
 
-  const loadSchedule = async () => {
+  const loadSchedule = async (urlOverride) => {
     setSchedLoading(true); setSchedErr("");
     try {
-      var rows = await loadScheduleFromScript();
+      var schedUrl = urlOverride || webAppUrl || "";
+      var rows = await loadScheduleFromScript(schedUrl);
       SCHEDULE_DATA_CACHE = rows;
       setScheduleData(rows);
       var seen = {};
@@ -1542,9 +1559,29 @@ Now write a UNIQUE post for ${biz}. Use ALL ${kl.length} keywords listed above. 
                 {scheduleData.length > 0 && <span style={{ marginLeft:"auto", fontSize:11, fontWeight:400, color:"#5F6368" }}>{scheduleData.length} posts · {availDates.length} dates{executives.length > 0 ? " · " + executives.length + " execs" : ""}</span>}
               </div>
               {scheduleData.length === 0 && (
-                <div style={{ fontSize:12, color:"#5F6368", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
-                  <span>Connect your schedule sheet to load dates and businesses automatically.</span>
-                  <button onClick={() => { var el = document.getElementById("schedule-url-input"); if(el) el.scrollIntoView({behavior:"smooth"}); }} style={{ fontSize:11.5, fontWeight:700, color:"white", background:G_BLUE, border:"none", borderRadius:7, padding:"5px 12px", cursor:"pointer", fontFamily:"inherit" }}>Connect in Settings ↓</button>
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  <div style={{ fontSize:12.5, color:"#5F6368", lineHeight:1.6 }}>
+                    Paste your Google Apps Script Web App URL below to load your monthly schedule — executives, dates, and businesses will auto-fill.
+                  </div>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <input
+                      id="schedule-url-input-inline"
+                      value={webAppUrl}
+                      onChange={e => setWebAppUrl(e.target.value)}
+                      placeholder="https://script.google.com/macros/s/YOUR_ID/exec"
+                      style={{ flex:1, padding:"9px 12px", borderRadius:9, border:"1.5px solid #DADCE0", fontSize:12, fontFamily:"inherit", color:"#3C4043", background:"white", outline:"none" }}
+                      onFocus={e => { e.target.style.borderColor = G_BLUE; e.target.style.boxShadow = "0 0 0 3px #4285F41a"; }}
+                      onBlur={e  => { e.target.style.borderColor = "#DADCE0"; e.target.style.boxShadow = "none"; }}
+                    />
+                    <button
+                      onClick={() => { loadClients(webAppUrl); loadSchedule(webAppUrl); }}
+                      disabled={schedLoading || dbLoading}
+                      style={{ padding:"9px 16px", borderRadius:9, border:"none", background:(schedLoading||dbLoading)?"#BDC1C6":"linear-gradient(135deg,"+G_BLUE+","+G_GREEN+")", color:"white", fontSize:12.5, fontWeight:700, cursor:(schedLoading||dbLoading)?"not-allowed":"pointer", fontFamily:"inherit", whiteSpace:"nowrap" }}
+                    >
+                      {(schedLoading||dbLoading) ? "Connecting..." : "🔗 Connect Sheet"}
+                    </button>
+                  </div>
+                  {schedErr && <div style={{ fontSize:11.5, color:"#EA4335", padding:"6px 10px", background:"#FEF1F0", borderRadius:7, border:"1px solid #EA433533" }}>⚠️ {schedErr}</div>}
                 </div>
               )}
               {scheduleData.length > 0 && (
@@ -1938,23 +1975,37 @@ Now write a UNIQUE post for ${biz}. Use ALL ${kl.length} keywords listed above. 
               Paste your <b>Google Apps Script Web App URL</b> below to load clients and save new ones. Your sheet must have columns: <b>Business Name | Latitude | Longitude</b>
             </div>
             <div style={{ display:"flex", gap:10 }}>
-              <input value={webAppUrl} onChange={e => setWebAppUrl(e.target.value)} placeholder="https://script.google.com/macros/s/YOUR_ID/exec"
+              <input id="schedule-url-input" value={webAppUrl} onChange={e => setWebAppUrl(e.target.value)} placeholder="https://script.google.com/macros/s/YOUR_ID/exec"
                 style={{ flex:1, padding:"10px 13px", borderRadius:10, border:"1.5px solid #DADCE0", fontSize:12.5, fontFamily:"inherit", color:"#3C4043", background:"white", outline:"none" }}
                 onFocus={e => { e.target.style.borderColor = G_BLUE; e.target.style.boxShadow = "0 0 0 3px #4285F41a"; }}
                 onBlur={e  => { e.target.style.borderColor = "#DADCE0"; e.target.style.boxShadow = "none"; }}/>
-              <button onClick={() => loadClients(webAppUrl)} disabled={dbLoading} style={{ padding:"10px 18px", borderRadius:10, border:"none", background: dbLoading ? "#BDC1C6" : "linear-gradient(135deg," + G_BLUE + "," + G_GREEN + ")", color:"white", fontSize:13, fontWeight:700, cursor: dbLoading ? "not-allowed" : "pointer", fontFamily:"inherit", whiteSpace:"nowrap" }}>
-                {dbLoading ? "Loading..." : "Connect"}
+              <button onClick={() => { loadClients(webAppUrl); loadSchedule(webAppUrl); }} disabled={dbLoading || schedLoading} style={{ padding:"10px 18px", borderRadius:10, border:"none", background: (dbLoading || schedLoading) ? "#BDC1C6" : "linear-gradient(135deg," + G_BLUE + "," + G_GREEN + ")", color:"white", fontSize:13, fontWeight:700, cursor: (dbLoading || schedLoading) ? "not-allowed" : "pointer", fontFamily:"inherit", whiteSpace:"nowrap" }}>
+                {(dbLoading || schedLoading) ? "Connecting..." : "Connect"}
               </button>
             </div>
             {clients.length > 0 && (
-              <div style={{ padding:"8px 12px", borderRadius:8, background:"#E8F5E9", border:"1.5px solid #34A85344", fontSize:12, color:"#2E7D32", fontWeight:600 }}>
-                Connected -- {clients.length} client(s) loaded from sheet
+              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {clients.length > 0 && (
+                  <div style={{ padding:"8px 12px", borderRadius:8, background:"#E8F5E9", border:"1.5px solid #34A85344", fontSize:12, color:"#2E7D32", fontWeight:600 }}>
+                    ✅ Clients connected — {clients.length} client(s) loaded
+                  </div>
+                )}
+                {scheduleData.length > 0 && (
+                  <div style={{ padding:"8px 12px", borderRadius:8, background:"#E3F2FD", border:"1.5px solid #4285F444", fontSize:12, color:"#1565C0", fontWeight:600 }}>
+                    ✅ Schedule connected — {scheduleData.length} posts across {availDates.length} dates · {executives.length} executives
+                  </div>
+                )}
+                {schedErr && (
+                  <div style={{ padding:"8px 12px", borderRadius:8, background:"#FEF1F0", border:"1.5px solid #EA433533", fontSize:12, color:"#EA4335" }}>
+                    ⚠️ Schedule error: {schedErr}
+                  </div>
+                )}
               </div>
             )}
 
             <div style={{ height:1, background:"#E8EAED", margin:"2px 0" }}/>
-            <div style={{ padding:"8px 12px", borderRadius:8, background:"#E8F5E9", border:"1.5px solid #34A85344", fontSize:12, color:"#2E7D32", fontWeight:600 }}>
-              📅 Schedule loaded -- {SCHEDULE_ROWS.length} posts across 20 dates (Mar 2-27, 2026). To update, share new sheet data and the schedule will be refreshed.
+            <div style={{ padding:"8px 12px", borderRadius:8, background: scheduleData.length > SCHEDULE_ROWS.length || (scheduleData.length > 0 && webAppUrl !== SHEET_URL_DEFAULT) ? "#E3F2FD" : "#E8F5E9", border:"1.5px solid " + (scheduleData.length > SCHEDULE_ROWS.length || (scheduleData.length > 0 && webAppUrl !== SHEET_URL_DEFAULT) ? "#4285F444" : "#34A85344"), fontSize:12, fontWeight:600, color: scheduleData.length > SCHEDULE_ROWS.length || (scheduleData.length > 0 && webAppUrl !== SHEET_URL_DEFAULT) ? "#1565C0" : "#2E7D32" }}>
+              📅 {scheduleData.length > 0 ? scheduleData.length + " posts · " + availDates.length + " dates · " + executives.length + " executives loaded" : "Paste your Web App URL above and click Connect to load live schedule from Google Sheet."}
             </div>
             <div style={{ padding:"13px 14px", borderRadius:10, background:"#F8F9FA", border:"1px solid #E8EAED" }}>
               <div style={{ fontSize:12, fontWeight:700, color:"#202124", marginBottom:8 }}>Apps Script Setup (2 minutes)</div>
