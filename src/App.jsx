@@ -1056,16 +1056,61 @@ export default function App() {
     setDateClients(filtered);
   };
 
-  const onScheduleClientSelect = (name) => {
-    setBiz(name);
-    var row = dateClients.find(function(r) { return r.name === name; });
-    if (row) {
-      setKw((row.keywords || "").replace(/,\s*/g, "\n"));
-      setUrl(row.url || "");
-      setLat(String(row.lat || ""));
-      setLng(String(row.lng || ""));
-    }
-  };
+ // Service rules: each pattern maps to correct base keywords for that service type
+const SERVICE_RULES = [
+  // Dental treatments → dentist + dental clinic
+  { pattern: /root canal|dental implant|implant treatment|implant specialist|braces treatment|orthodontic|orthodontist|wisdom tooth|teeth clean|smile makeover|cosmetic dentist|kids dent|pediatric dent|maxillofacial|endodontic|aligner|tmj|tooth removal/i,
+    bases: (loc) => [dentist in ${loc}, dental clinic in ${loc}] },
+  // IVF / fertility
+  { pattern: /ivf|fertility|test tube|embryo/i,
+    bases: (loc) => [ivf center in ${loc}, ivf hospital in ${loc}] },
+  // Neurology / brain / spine / migraine
+  { pattern: /neurosurgeon|neurointerventional|neurologist|brain surgeon|brain specialist|spine surgeon|migraine/i,
+    bases: (loc) => [neurologist in ${loc}, neurosurgeon in ${loc}] },
+  // Nursing / home care / patient care
+  { pattern: /nursing care|home care|patient care|coma patient|paralysis care|cancer.*care|inpatient|long.term.*care/i,
+    bases: (loc) => [nursing care centre in ${loc}, home nursing care in ${loc}] },
+  // Skin / dermatology
+  { pattern: /skin clinic|dermatologist|skin specialist|skin care|hair clinic|cosmetolog/i,
+    bases: (loc) => [skin clinic in ${loc}, dermatologist in ${loc}] },
+];
+
+const extractLocation = (kw) => {
+  const match = kw.match(/\bin\s+(.+)$/i);
+  return match ? match[1].trim().toLowerCase() : null;
+};
+
+const enrichKeywords = (kwList) => {
+  const existing = kwList.map(k => k.toLowerCase());
+  const toAdd = [];
+  kwList.forEach(kw => {
+    const rule = SERVICE_RULES.find(r => r.pattern.test(kw));
+    if (!rule) return;
+    const loc = extractLocation(kw);
+    if (!loc) return;
+    const candidates = rule.bases(loc);
+    candidates.forEach(candidate => {
+      const cl = candidate.toLowerCase();
+      const alreadyExists = existing.some(e => e === cl || e.includes(cl));
+      const alreadyQueued = toAdd.map(k => k.toLowerCase()).includes(cl);
+      if (!alreadyExists && !alreadyQueued) toAdd.push(candidate);
+    });
+  });
+  return [...kwList, ...toAdd];
+};
+
+const onScheduleClientSelect = (name) => {
+  setBiz(name);
+  var row = dateClients.find(function(r) { return r.name === name; });
+  if (row) {
+    const rawKws = (row.keywords || "").split(/,\s*/).map(k => k.trim()).filter(Boolean);
+    const enriched = enrichKeywords(rawKws);
+    setKw(enriched.join("\n"));
+    setUrl(row.url || "");
+    setLat(String(row.lat || ""));
+    setLng(String(row.lng || ""));
+  }
+};
 
   const selectClient = (name) => {
     setBiz(name);
