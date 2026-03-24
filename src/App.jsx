@@ -1058,21 +1058,16 @@ export default function App() {
 
  // Service rules: each pattern maps to correct base keywords for that service type
 const SERVICE_RULES = [
-  // Dental treatments → dentist + dental clinic
   { pattern: /root canal|dental implant|implant treatment|implant specialist|braces treatment|orthodontic|orthodontist|wisdom tooth|teeth clean|smile makeover|cosmetic dentist|kids dent|pediatric dent|maxillofacial|endodontic|aligner|tmj|tooth removal/i,
-    bases: (loc) => [dentist in ${loc}, dental clinic in ${loc}] },
-  // IVF / fertility
+    bases: (loc) => [`dentist in ${loc}`, `dental clinic in ${loc}`] },
   { pattern: /ivf|fertility|test tube|embryo/i,
-    bases: (loc) => [ivf center in ${loc}, ivf hospital in ${loc}] },
-  // Neurology / brain / spine / migraine
+    bases: (loc) => [`ivf center in ${loc}`, `ivf hospital in ${loc}`] },
   { pattern: /neurosurgeon|neurointerventional|neurologist|brain surgeon|brain specialist|spine surgeon|migraine/i,
-    bases: (loc) => [neurologist in ${loc}, neurosurgeon in ${loc}] },
-  // Nursing / home care / patient care
+    bases: (loc) => [`neurologist in ${loc}`, `neurosurgeon in ${loc}`] },
   { pattern: /nursing care|home care|patient care|coma patient|paralysis care|cancer.*care|inpatient|long.term.*care/i,
-    bases: (loc) => [nursing care centre in ${loc}, home nursing care in ${loc}] },
-  // Skin / dermatology
+    bases: (loc) => [`nursing care centre in ${loc}`, `home nursing care in ${loc}`] },
   { pattern: /skin clinic|dermatologist|skin specialist|skin care|hair clinic|cosmetolog/i,
-    bases: (loc) => [skin clinic in ${loc}, dermatologist in ${loc}] },
+    bases: (loc) => [`skin clinic in ${loc}`, `dermatologist in ${loc}`] },
 ];
 
 const extractLocation = (kw) => {
