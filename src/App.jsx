@@ -1543,8 +1543,10 @@ Now write a UNIQUE post for ${biz}. Use ALL ${kl.length} keywords listed above. 
           <div style={{ display:"flex", justifyContent:"center", gap:7, marginBottom:9 }}>
             {[G_BLUE, G_RED, G_YELLOW, G_GREEN].map((c, i) => <Dot key={i} c={c} s={9}/>)}
           </div>
-          <h1 style={{ fontSize:28, fontWeight:700, margin:"0 0 5px", letterSpacing:"-.03em", background:`linear-gradient(135deg,${G_BLUE},${G_GREEN})`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>GMB Post Creator Pro</h1>
-          <p style={{ fontSize:13.5, color:"#5F6368", margin:0 }}>Ranking-optimized posts · UTM tracking · GeoTag image injection</p>
+          
+           <h1 style={{ fontSize:28, fontWeight:700, margin:"0 0 5px", letterSpacing:"-.03em", background:`linear-gradient(135deg,${G_BLUE},${G_GREEN})`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>GMB Post Creator Pro</h1>
+          <h3 style={{ fontSize:28, fontWeight:700, margin:"0 0 5px", letterSpacing:"-.03em", background:`linear-gradient(135deg,${G_BLUE},${G_GREEN})`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>Designed By Ivan Joseph</h3>
+           <p style={{ fontSize:13.5, color:"#5F6368", margin:0 }}>Ranking-optimized posts · UTM tracking · GeoTag image injection</p>
         </div>
 
         {/* POST GENERATOR */}
